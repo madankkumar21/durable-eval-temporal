@@ -68,6 +68,22 @@ s2() {
   echo "calls after restart: $(calls_for_run "plain-$STAMP") for 30 items; distinct PIDs: $(pids_for_run "plain-$STAMP")"
 }
 
+s3() {
+  echo; echo "== S3: kill -9 the worker while the run waits for approval, restart, approve =="
+  start_worker
+  run start --run-id "s3-$STAMP" --n 3 >/dev/null
+  inspect ready "s3-$STAMP" >/dev/null
+  echo "calls before kill: $(calls_for_run "s3-$STAMP") for 3 items"
+  stop_worker; sleep 10
+  echo "-- no worker attached:"
+  run status --run-id "s3-$STAMP" || true   # the run stays RUNNING; the query needs a worker, so it fails
+  start_worker; echo "worker restarted"
+  run status --run-id "s3-$STAMP" | grep -E '"waiting_for_approval"'
+  run approve --run-id "s3-$STAMP" --decision yes --wait | grep -E '"published"'
+  echo "calls after approve: $(calls_for_run "s3-$STAMP") for 3 items; distinct worker PIDs: $(pids_for_run "s3-$STAMP")"
+  stop_worker
+}
+
 s4() {
   echo; echo "== S4: deploy new workflow code while runs are in flight =="
   start_worker VEU_STUB_DELAY_S=1 VEU_WORKFLOW_VERSION=v1
@@ -144,4 +160,4 @@ s7() {
 }
 
 # shellcheck disable=SC2068
-for s in ${@:-s1 s2 s4 s5 s6 s7}; do $s; done
+for s in ${@:-s1 s2 s3 s4 s5 s6 s7}; do $s; done
