@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 840" width="1200" height="840" role="img" aria-label="durable-eval-temporal architecture: CLI, Temporal dev server, worker process, core, model, results, and the plain-loop baseline, with 13 numbered flows.">
+  <style>
+.zone{fill:#f7f9fc;stroke:#b9c3d1;stroke-width:1.2;stroke-dasharray:6 4}
+.zl{fill:#5b6575;font:600 11px Menlo,Consolas,"DejaVu Sans Mono",monospace;letter-spacing:.08em}
+.node{fill:#ffffff;stroke:#141b26;stroke-width:1.3}
+.node.hi{fill:#fff4c7}
+.node.dsh{stroke-dasharray:5 4;stroke:#5b6575}
+.nt{fill:#141b26;font:600 13.5px Helvetica,Arial,sans-serif}
+.ns{fill:#5b6575;font:11px Menlo,Consolas,"DejaVu Sans Mono",monospace}
+.pillnode{fill:#141b26}.pilltext{fill:#ffffff;font:600 12.5px Helvetica,Arial,sans-serif}
+.e{fill:none;stroke-width:2}.ew{stroke:#2f5bd3}.ef{stroke:#c9581a}.ea{stroke:#16824f}.ep{stroke:#7a8494}
+.halo{fill:none;stroke:#ffffff;stroke-width:7}
+.bc{stroke:#ffffff;stroke-width:1.5}.bcw{fill:#2f5bd3}.bcf{fill:#c9581a}.bca{fill:#16824f}
+.bt{fill:#ffffff;font:600 10.5px Menlo,Consolas,"DejaVu Sans Mono",monospace}
+.el{font:11px Menlo,Consolas,"DejaVu Sans Mono",monospace}.elw{fill:#2f5bd3}.elf{fill:#c9581a}.ela{fill:#16824f}.elp{fill:#7a8494}
+.tag{stroke-width:1.2;fill:#ffffff}
+.mk-w{fill:#2f5bd3}.mk-f{fill:#c9581a}.mk-a{fill:#16824f}.mk-p{fill:#7a8494}
+</style>
+<rect width="1200" height="840" fill="#ffffff"/>
+  <defs>
+    <marker id="aw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" class="mk-w"/></marker>
+    <marker id="af" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" class="mk-f"/></marker>
+    <marker id="aa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" class="mk-a"/></marker>
+    <marker id="ap" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" class="mk-p"/></marker>
+  </defs>
+
+  <!-- zones -->
+  <rect class="zone" x="20" y="30" width="230" height="340" rx="10"/><text class="zl" x="34" y="50">LAPTOP · CLI</text>
+  <rect class="zone" x="290" y="30" width="340" height="340" rx="10"/><text class="zl" x="304" y="50">TEMPORAL DEV SERVER · LOCAL</text>
+  <rect class="zone" x="670" y="30" width="510" height="340" rx="10"/><text class="zl" x="684" y="50">WORKER PROCESS · .venv/bin/python</text>
+  <rect class="zone" x="20" y="420" width="230" height="170" rx="10"/><text class="zl" x="34" y="440">BASELINE · engines/plain.py</text>
+  <rect class="zone" x="290" y="420" width="570" height="170" rx="10"/><text class="zl" x="304" y="440">CORE · PLAIN PYTHON</text><text class="ns" x="560" y="440">imports no engine</text>
+  <rect class="zone" x="900" y="420" width="280" height="170" rx="10"/><text class="zl" x="914" y="440">MODEL</text>
+  <rect class="zone" x="290" y="640" width="890" height="130" rx="10"/><text class="zl" x="304" y="660">RESULTS</text><text class="ns" x="470" y="660">results/ · gitignored</text>
+
+  <!-- laptop -->
+  <rect class="pillnode" x="45" y="70" width="180" height="34" rx="17"/><text class="pilltext" x="135" y="92" text-anchor="middle">approver (a person)</text>
+  <rect class="node" x="45" y="160" width="180" height="110" rx="8"/>
+  <text class="nt" x="59" y="182">run.py (CLI)</text>
+  <text class="ns" x="59" y="200">start · status</text>
+  <text class="ns" x="59" y="215">approve · result</text>
+  <text class="ns" x="59" y="236">workflow id = run id</text>
+  <text class="ns" x="59" y="251">env: TEMPORAL_ADDRESS</text>
+  <text class="ns" x="34" y="300">temporal_scenarios.sh</text>
+  <text class="ns" x="34" y="315">drives S1–S7 and kills</text>
+  <text class="ns" x="34" y="330">python, not the uv wrapper</text>
+
+  <!-- server -->
+  <rect class="node" x="310" y="70" width="130" height="200" rx="8"/>
+  <text class="nt" x="324" y="92">start-dev</text>
+  <text class="ns" x="324" y="110">one process</text>
+  <text class="ns" x="324" y="125">port 7233</text>
+  <text class="ns" x="324" y="140">namespace default</text>
+  <rect class="node" x="455" y="70" width="160" height="90" rx="8"/>
+  <text class="nt" x="469" y="92">task queue</text>
+  <text class="ns" x="469" y="110">video-eval</text>
+  <text class="ns" x="469" y="125">workers poll it</text>
+  <rect class="node" x="455" y="180" width="160" height="90" rx="8"/>
+  <text class="nt" x="469" y="202">event history</text>
+  <text class="ns" x="469" y="220">results/temporal.db</text>
+  <text class="ns" x="469" y="235">via --db-filename</text>
+  <text class="ns" x="304" y="300">History limit: 51,200 events or 50 MB</text>
+  <text class="ns" x="304" y="315">Payload limit: 2 MB per payload</text>
+  <text class="ns" x="304" y="335">Signals reach the server with no worker;</text>
+  <text class="ns" x="304" y="350">queries need a worker polling.</text>
+
+  <!-- worker -->
+  <rect class="node" x="690" y="70" width="470" height="52" rx="8"/>
+  <text class="nt" x="704" y="92">Worker</text>
+  <text class="ns" x="704" y="110">polls video-eval · 16 threads · 12 concurrent activities</text>
+  <rect class="node" x="690" y="140" width="470" height="80" rx="8"/>
+  <text class="nt" x="704" y="162">EvalWorkflow · deterministic</text>
+  <text class="ns" x="704" y="180">batches: gather(answer_item × concurrency)</text>
+  <text class="ns" x="704" y="195">continue-as-new every chunk (50 in S5), carrying all rows</text>
+  <text class="ns" x="704" y="210">wait_condition(approve) · query status · patch progress-v2</text>
+  <rect class="node hi" x="690" y="245" width="310" height="110" rx="8"/>
+  <text class="nt" x="704" y="267">answer_item_activity</text>
+  <text class="ns" x="704" y="285">RetryPolicy 2 s ×2 ≤60 s · 8 attempts</text>
+  <text class="ns" x="704" y="300">"Fatal" errors: non-retryable</text>
+  <text class="ns" x="704" y="315">start-to-close 180 s</text>
+  <text class="ns" x="704" y="330">one heartbeat at start</text>
+  <text class="ns" x="704" y="345">heartbeat timeout 5 s (S2, S6, S7)</text>
+  <rect class="node" x="1012" y="245" width="148" height="32" rx="6"/><text class="ns" x="1024" y="265">summarize · 60 s</text>
+  <rect class="node" x="1012" y="284" width="148" height="32" rx="6"/><text class="ns" x="1024" y="304">progress · v2 only</text>
+  <rect class="node" x="1012" y="323" width="148" height="32" rx="6"/><text class="ns" x="1024" y="343">publish · 60 s</text>
+
+  <!-- plain -->
+  <rect class="node" x="40" y="455" width="190" height="115" rx="8"/>
+  <text class="nt" x="54" y="477">plain loop</text>
+  <text class="ns" x="54" y="495">while True + sleep</text>
+  <text class="ns" x="54" y="510">min(2**n, 60) · 5 retries</text>
+  <text class="ns" x="54" y="525">input() before publish</text>
+  <text class="ns" x="54" y="545">resume = cache only</text>
+
+  <!-- core strip -->
+  <rect class="node" x="310" y="455" width="90" height="56" rx="6"/><text class="nt" x="324" y="477">tasks</text><text class="ns" x="324" y="495">load_items</text>
+  <rect class="node hi" x="415" y="455" width="120" height="56" rx="6"/><text class="nt" x="429" y="477">model</text><text class="ns" x="429" y="495">answer_item</text>
+  <rect class="node" x="550" y="455" width="90" height="56" rx="6"/><text class="nt" x="564" y="477">score</text><text class="ns" x="564" y="495">Scored row</text>
+  <rect class="node" x="655" y="455" width="90" height="56" rx="6"/><text class="nt" x="669" y="477">stats</text><text class="ns" x="669" y="495">Wilson CI</text>
+  <rect class="node" x="760" y="455" width="85" height="56" rx="6"/><text class="nt" x="774" y="477">publish</text><text class="ns" x="774" y="495">jsonl + md</text>
+  <path class="e ep" d="M400 483 H411" marker-end="url(#ap)"/><path class="e ep" d="M535 483 H546" marker-end="url(#ap)"/><path class="e ep" d="M640 483 H651" marker-end="url(#ap)"/><path class="e ep" d="M745 483 H756" marker-end="url(#ap)"/>
+  <text class="ns" x="455" y="560">cache key: model_id, item_id, prompt_hash</text><text class="ns" x="455" y="575">cache reads off for every test</text>
+
+  <!-- model -->
+  <rect class="node" x="915" y="455" width="120" height="115" rx="8"/>
+  <text class="nt" x="929" y="477">stub / stub-b</text>
+  <text class="ns" x="929" y="495">free</text>
+  <text class="ns" x="929" y="510">faults:</text>
+  <text class="ns" x="929" y="525">429 · hang</text>
+  <rect class="node dsh" x="1045" y="455" width="120" height="115" rx="8"/>
+  <text class="nt" x="1059" y="477">Claude API</text>
+  <text class="ns" x="1059" y="495">max_retries=0</text>
+  <text class="ns" x="1059" y="510">engine owns</text>
+  <text class="ns" x="1059" y="525">retries</text>
+  <text class="ns" x="1059" y="550">not run here</text>
+
+  <!-- results -->
+  <rect class="node" x="310" y="680" width="300" height="72" rx="8"/>
+  <text class="nt" x="324" y="702">cache.sqlite</text>
+  <text class="ns" x="324" y="720">calls: result cache (reads off)</text>
+  <text class="ns" x="324" y="735">http_calls: one row per call sent</text>
+  <rect class="node" x="640" y="680" width="300" height="72" rx="8"/>
+  <text class="nt" x="654" y="702">&lt;run_id&gt;.jsonl · .summary.*</text>
+  <text class="ns" x="654" y="720">written only after approve = yes</text>
+  <text class="ns" x="654" y="735">engine: temporal</text>
+  <rect class="node" x="970" y="680" width="190" height="72" rx="8"/>
+  <text class="nt" x="984" y="702">progress.json</text>
+  <text class="ns" x="984" y="720">v2 (patched) path only</text>
+  <text class="ns" x="984" y="735">written by progress</text>
+
+  <!-- edges: work loop -->
+  <path class="e ew" d="M225 190 H306" marker-end="url(#aw)"/><text class="el elw" x="230" y="184">start</text>
+  <circle class="bc bcw" cx="294" cy="190" r="9"/><text class="bt" x="294" y="194" text-anchor="middle">1</text>
+  <path class="e ew" d="M690 96 H614" marker-end="url(#aw)"/><text class="el elw" x="628" y="88">poll</text>
+  <circle class="bc bcw" cx="660" cy="96" r="9"/><text class="bt" x="660" y="100" text-anchor="middle">2</text>
+  <path class="e ew" d="M760 220 V241" marker-end="url(#aw)"/><text class="el elw" x="786" y="238">ItemCall(index)</text>
+  <circle class="bc bcw" cx="774" cy="232" r="9"/><text class="bt" x="774" y="236" text-anchor="middle">3</text>
+  <path class="e ew" d="M720 355 V395 H475 V451" marker-end="url(#aw)"/><text class="el elw" x="560" y="389">answer_item()</text>
+  <circle class="bc bcw" cx="660" cy="395" r="9"/><text class="bt" x="660" y="399" text-anchor="middle">4</text>
+  <path class="halo" d="M500 511 V530 H911"/>
+  <path class="e ew" d="M500 511 V530 H911" marker-end="url(#aw)"/><text class="el elw" x="795" y="548" text-anchor="end">prompt → letter</text>
+  <circle class="bc bcw" cx="880" cy="530" r="9"/><text class="bt" x="880" y="534" text-anchor="middle">5</text>
+  <path class="e ew" d="M440 511 V676" marker-end="url(#aw)"/><text class="el elw" x="450" y="622">row on send</text>
+  <circle class="bc bcw" cx="440" cy="615" r="9"/><text class="bt" x="440" y="619" text-anchor="middle">6</text>
+  <path class="e ew" d="M690 300 H650 V250 H614" marker-end="url(#aw)"/><text class="el elw" x="618" y="318">result</text>
+  <circle class="bc bcw" cx="650" cy="275" r="9"/><text class="bt" x="650" y="279" text-anchor="middle">7</text>
+
+  <!-- edges: failure paths -->
+  <path class="e ef" d="M614 205 H640 V170 H686" marker-end="url(#af)"/><text class="el elf" x="646" y="163">replay</text>
+  <circle class="bc bcf" cx="640" cy="188" r="9"/><text class="bt" x="640" y="192" text-anchor="middle">8</text>
+  <rect class="tag" x="1010" y="150" width="138" height="22" rx="11" style="stroke:#c9581a"/><text class="el elf" x="1030" y="165">continue-as-new</text>
+  <circle class="bc bcf" cx="1010" cy="161" r="9"/><text class="bt" x="1010" y="165" text-anchor="middle">9</text>
+  <rect class="tag" x="888" y="306" width="104" height="22" rx="11" style="stroke:#c9581a"/><text class="el elf" x="904" y="321">retry/timeout</text>
+  <circle class="bc bcf" cx="888" cy="317" r="9"/><text class="bt" x="888" y="321" text-anchor="middle">10</text>
+
+  <!-- edges: approval and publish -->
+  <path class="e ea" d="M306 245 H229" marker-end="url(#aa)"/><text class="el ela" x="236" y="239">status</text>
+    <circle class="bc bca" cx="294" cy="245" r="9"/><text class="bt" x="294" y="249" text-anchor="middle">11</text>
+  <path class="e ea" d="M135 104 V156" marker-end="url(#aa)"/><text class="el ela" x="145" y="134">yes / no</text>
+  <path class="e ea" d="M225 218 H306" marker-end="url(#aa)"/><text class="el ela" x="230" y="212">approve</text>
+  <circle class="bc bca" cx="294" cy="218" r="9"/><text class="bt" x="294" y="222" text-anchor="middle">12</text>
+  <path class="halo" d="M802 511 V676"/>
+  <path class="e ea" d="M802 511 V676" marker-end="url(#aa)"/><text class="el ela" x="812" y="622">after yes</text>
+  <circle class="bc bca" cx="802" cy="615" r="9"/><text class="bt" x="802" y="619" text-anchor="middle">13</text>
+
+  <!-- plain baseline -->
+  <path class="e ep" d="M230 500 H306" marker-end="url(#ap)"/><text class="el elp" x="236" y="492">same core</text>
+
+  <!-- legend -->
+  <line x1="20" y1="805" x2="50" y2="805" class="e ew"/><text class="el elp" x="58" y="809" style="fill:#5b6575">work loop</text>
+  <line x1="150" y1="805" x2="180" y2="805" class="e ef"/><text class="el" x="188" y="809" style="fill:#5b6575">failure path</text>
+  <line x1="300" y1="805" x2="330" y2="805" class="e ea"/><text class="el" x="338" y="809" style="fill:#5b6575">approval and publish</text>
+  <line x1="500" y1="805" x2="530" y2="805" class="e ep"/><text class="el" x="538" y="809" style="fill:#5b6575">plain-loop baseline</text>
+  <rect x="690" y="797" width="30" height="16" rx="3" class="node dsh"/><text class="el" x="728" y="809" style="fill:#5b6575">not run in these tests</text>
+  <text class="el" x="1180" y="809" text-anchor="end" style="fill:#5b6575">measured: stub model, local dev server</text>
+</svg>

@@ -1,4 +1,4 @@
-"""Write a run's rows and summary. Reading them back is what the MCP tool does."""
+"""Write a run's rows and summary, and read them back."""
 
 from __future__ import annotations
 
