@@ -37,8 +37,27 @@ class EvalWorkflow:
 
     @workflow.signal
     def approve(self, decision: str) -> None:
-        """Scenario 3: a person decides whether the results publish."""
+        """Scenario 3: a person decides whether the results publish. Kept for approving while no
+        worker runs: a signal is stored by the server, but nothing checks it."""
         self.decision = decision
+
+    @workflow.update
+    def decide(self, decision: str) -> str:
+        """Scenario 3: the same decision, but the sender gets an answer or a refusal."""
+        self.decision = decision
+        return f"accepted: {decision}"
+
+    @decide.validator
+    def validate_decide(self, decision: str) -> None:
+        # Runs on the worker before the update is accepted; a refusal is not written to history.
+        # Plain state checks only, so it can be unit-tested without a server.
+        if decision not in ("yes", "no"):
+            raise ValueError(f"decision must be yes or no, not {decision!r}")
+        if self.decision is not None:
+            raise ValueError(f"already decided: {self.decision}")
+        if self.summary is None:
+            n = self.params.n if self.params else "?"
+            raise ValueError(f"still scoring: {self.progress} of {n} items")
 
     @workflow.query
     def status(self) -> dict:

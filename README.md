@@ -12,16 +12,19 @@ Every scenario runs with a free stub model, so anyone can reproduce it. Full tab
 |---|---|---|---|
 | 1 | Survive rate limits | A simulated 429 retried under a `RetryPolicy`; the workflow never saw it | Hand-written backoff |
 | 2 | Survive a crash without re-paying | `kill -9` mid-run: **31 calls for 30 items** (one was in flight) | **36 calls** |
-| 3 | Wait for a person | Waits on a signal in RUNNING with no worker attached, including through a `kill -9` of the worker during the wait (3 calls for 3 items) | `input()`; lost on a crash |
+| 3 | Wait for a person | Waits in RUNNING with no worker attached, including through a `kill -9` of the worker during the wait. The approval is an update: sent while the run was still scoring, it was refused with "still scoring: 1 of 10 items" (10 calls for 10 items) | `input()`; lost on a crash |
 | 4 | Deploy new code while runs are in flight | Unpatched change: nondeterminism error, runs held, not lost. `workflow.patched()`: old runs finish on the old path, new runs take the new one. Caught in pytest by a replay test | n/a |
 | 5 | Run long | 200 items as 4 runs via continue-as-new, about 305 events each; carried state 37.7 KB at the last hop | n/a |
 | 6 | Throughput | 8 calls in flight: **2.5 s against 29.4 s**; a crash mid-batch re-pays the batch in flight (38 calls for 30) | n/a |
 | 7 | A call that never returns | Heartbeat timeout fires, Temporal retries, run completes in 5.6 s | **Hangs** |
 
+**What about a result cache instead of an engine?** Scenario 2c reruns the crash with the plain loop's result cache on. It matched Temporal on crash cost (31 calls for 30 items each), but the hung call still hung. By design, nothing in it records which runs are in progress, and its approval lives in one process. [COMPARISON.md](COMPARISON.md#the-hand-built-alternative-a-plain-loop-plus-a-result-cache) lists what you would still build.
+
 What I took from it, as advice I would give a customer:
-- Durable execution removes the re-pay on a crash, but not the in-flight call. With fan-out, that is a whole batch. Put an idempotency key or a result cache on the expensive call.
+- Durable execution removes the re-pay on a crash, but not the call in flight. With fan-out, that is a whole batch, and a result cache cannot save a call that never returned. Keep batches small, or use a provider-side idempotency key where the API offers one.
 - Treat workflow code changes as a deploy concern from day one. Prefer Worker Versioning where your deploys allow it; otherwise `workflow.patched()` plus a replay test in CI against saved histories, as here.
 - Do not carry growing results through continue-as-new. Store them and carry a pointer, well before the 2 MB payload limit.
+- Make approvals answer back. An update with a validator refuses an approval of results that do not exist yet, and the sender sees why. Keep a signal for approvals while no worker runs: an update waits for a worker.
 - Set heartbeat timeouts on model calls. Without one, a hung call blocks until the start-to-close timeout. This harness heartbeats once, at the start, so the timeout bounds a silent attempt; for calls longer than the timeout, heartbeat from a background thread.
 
 ## How it fits together
@@ -43,7 +46,7 @@ engines/
   plain.py       the baseline loop
   temporal_app/  workflow, activities, worker, client CLI
 scripts/
-  temporal_scenarios.sh  runs scenarios 1 to 7 and prints the numbers
+  temporal_scenarios.sh  runs scenarios 1 to 7 and 2c, and prints the numbers
   inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers
 docs/
   ARCHITECTURE.md        the diagram, a step-by-step walkthrough, design decisions, production path

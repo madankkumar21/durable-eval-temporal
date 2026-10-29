@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-from temporalio.client import Client
+import sys
+from temporalio.client import Client, WorkflowUpdateFailedError, WorkflowUpdateRPCTimeoutOrCancelledError
+from temporalio.service import RPCError, RPCStatusCode
 
 from . import TASK_QUEUE, connect
 from .shared import EvalParams
@@ -39,13 +41,39 @@ async def status(a: argparse.Namespace) -> None:
             print(f"(query unavailable: {str(e).splitlines()[0]})")
 
 
-async def approve(a: argparse.Namespace) -> None:
+async def approve(a: argparse.Namespace) -> int:
     client = await _client()
     handle = client.get_workflow_handle_for(EvalWorkflow.run, a.run_id)
-    await handle.signal(EvalWorkflow.approve, a.decision)
-    print(f"signalled approve={a.decision}")
+    if a.signal:
+        # Stored by the server even with no worker running, but never checked or answered.
+        try:
+            await handle.signal(EvalWorkflow.approve, a.decision)
+        except RPCError as e:
+            if e.status != RPCStatusCode.NOT_FOUND:
+                raise
+            print(f"rejected: {e.message}")
+            return 1
+        print(f"signalled approve={a.decision}")
+    else:
+        # An update waits for a worker to run the validator, then returns its answer. With no
+        # worker polling, the client would retry forever, so the wait is capped.
+        try:
+            async with asyncio.timeout(a.timeout):
+                print(await handle.execute_update(EvalWorkflow.decide, a.decision))
+        except (TimeoutError, WorkflowUpdateRPCTimeoutOrCancelledError):
+            print(f"no worker answered within {a.timeout:g} s; start a worker, or use --signal")
+            return 1
+        except WorkflowUpdateFailedError as e:
+            print(f"rejected: {getattr(e.cause, 'message', e.cause)}")
+            return 1
+        except RPCError as e:
+            if e.status != RPCStatusCode.NOT_FOUND:
+                raise
+            print(f"rejected: {e.message}")
+            return 1
     if a.wait:
         print(json.dumps(await handle.result(), indent=2))
+    return 0
 
 
 async def result(a: argparse.Namespace) -> None:
@@ -79,6 +107,9 @@ def main() -> None:
     ap_ = sub.add_parser("approve")
     ap_.add_argument("--run-id", required=True)
     ap_.add_argument("--decision", default="yes", choices=["yes", "no"])
+    ap_.add_argument("--signal", action="store_true",
+                     help="send the unchecked signal instead of the update (works with no worker running)")
+    ap_.add_argument("--timeout", type=float, default=30, help="seconds to wait for a worker to answer the update")
     ap_.add_argument("--wait", action="store_true")
     ap_.set_defaults(fn=approve)
 
@@ -87,7 +118,7 @@ def main() -> None:
     r.set_defaults(fn=result)
 
     a = ap.parse_args()
-    asyncio.run(a.fn(a))
+    sys.exit(asyncio.run(a.fn(a)) or 0)
 
 
 if __name__ == "__main__":
