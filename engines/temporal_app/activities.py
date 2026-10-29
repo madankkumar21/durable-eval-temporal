@@ -31,6 +31,9 @@ def answer_item_activity(call: ItemCall) -> dict:
         raise ApplicationError(str(e), type="Retryable") from e
     except FatalModelError as e:
         raise ApplicationError(str(e), type="Fatal", non_retryable=True) from e
+    # Scenario 7b: an attempt can return after the server timed it out and a retry already finished.
+    print(f"[{call.run_id}] returned item {call.index + 1} {item.item_id} attempt {activity.info().attempt} "
+          f"after {result.latency_s:.1f} s", flush=True)
     return asdict(score(item, result))
 
 

@@ -193,13 +193,14 @@ def _stub_fault_once(item: Item) -> None:
 
 
 def _stub_hang_once(item: Item) -> None:
-    """If VEU_HANG_ITEM names this item, hang once (across processes), like a model call that never returns."""
+    """If VEU_HANG_ITEM names this item, hang once (across processes), like a model call that never returns.
+    VEU_HANG_S ends the hang after that many seconds, so the call returns late (scenario 7b)."""
     if os.environ.get("VEU_HANG_ITEM") != item.item_id:
         return
     marker = RESULTS_DIR / f".hang-{item.item_id.replace(':', '_')}"
     if not marker.exists():
         marker.write_text("hung")
-        time.sleep(3600)
+        time.sleep(float(os.environ.get("VEU_HANG_S", "3600")))
 
 
 def _stub_answer(item: Item, model_id: str) -> str:
