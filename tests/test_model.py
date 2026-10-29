@@ -36,12 +36,21 @@ def test_refusal_text_is_unparsed():
 
 def test_request_kwargs_per_model():
     from core.model import MAX_TOKENS, _request_kwargs
-    assert _request_kwargs("claude-haiku-4-5-20251001") == {"extra_body": {"temperature": 0.0}}
-    assert _request_kwargs("claude-haiku-4-5-20251001", None) == {}  # API default sampling
+    assert _request_kwargs("claude-haiku-4-5-20251001") == {}  # default sampling
     assert _request_kwargs("claude-sonnet-5-5") == {"thinking": {"type": "between_tools"}}
-    # Opus 5.5: effort only, merged into output_config; no thinking or sampling params
-    assert _request_kwargs("claude-opus-5-5", None) == {"output_config": {"effort": "medium"}}
+    # Opus 5.5: effort only, merged into output_config; no thinking params
+    assert _request_kwargs("claude-opus-5-5") == {"output_config": {"effort": "medium"}}
     assert MAX_TOKENS["claude-opus-5-5"] >= 1024
+
+
+def test_no_request_sends_sampling_params():
+    # API version 2026-10-21 returns a 400 for temperature, top_p or top_k, on every model,
+    # even when they arrive through extra_body.
+    from core.model import PRICES, _request_kwargs
+    for model_id in PRICES:
+        kwargs = _request_kwargs(model_id)
+        assert "extra_body" not in kwargs
+        assert not {"temperature", "top_p", "top_k"} & kwargs.keys()
 
 
 def test_opus_output_config_merges_effort_with_format(monkeypatch):
@@ -91,15 +100,20 @@ def test_truncated_reply_is_a_parse_failure(monkeypatch):
     assert m.parse_letter(text, 3) is None
 
 
-def test_temperature_changes_cache_key_only_when_not_default():
+def test_haiku45_rows_cached_at_temperature_0_are_not_reused(monkeypatch):
+    import core.model as m
     from core.frames import FrameCfg
-    from core.model import answer_item
     from core.tasks import Item
 
     item = Item("t:v1", "t", "v1.mp4", "How many?", ("1", "2", "3"), "2", "v1")
-    h0 = answer_item(item, "stub", FrameCfg(), "test").prompt_hash
-    assert answer_item(item, "stub", FrameCfg(temperature=0.0), "test").prompt_hash == h0
-    assert answer_item(item, "stub", FrameCfg(temperature=None), "test").prompt_hash != h0
+    stub_hash = m.answer_item(item, "stub", FrameCfg(), "test").prompt_hash
+    assert "-tdefault" not in stub_hash  # the stub's cache keys do not change
+
+    monkeypatch.setattr(m, "_call_anthropic", lambda *a: ('{"answer": "B"}', 120, 9))
+    for name in ("cache_get", "cache_put", "log_http_call"):
+        monkeypatch.setattr(m, name, lambda *a: None)
+    r = m.answer_item(item, "claude-haiku-4-5-20251001", FrameCfg(blind=True), "test")
+    assert r.prompt_hash.endswith("-tdefault")
 
 
 def test_blind_sends_no_frames_and_has_its_own_cache_key(monkeypatch):
@@ -112,7 +126,7 @@ def test_blind_sends_no_frames_and_has_its_own_cache_key(monkeypatch):
 
     sent = {}
 
-    def fake_call(model_id, content, n_options, label_style, temperature=0.0):
+    def fake_call(model_id, content, n_options, label_style):
         sent["content"] = content
         return '{"answer": "B"}', 120, 9
 
@@ -126,7 +140,7 @@ def test_blind_sends_no_frames_and_has_its_own_cache_key(monkeypatch):
     r = m.answer_item(item, "claude-haiku-4-5-20251001", FrameCfg(blind=True), "test")
     assert r.pred_letter == "B"
     assert all(block["type"] == "text" for block in sent["content"])
-    assert r.prompt_hash.endswith("-blind")
+    assert r.prompt_hash.endswith("-blind-tdefault")
     framed_hash = m.build_prompt(item, [], "letter")[1]
     assert r.prompt_hash != framed_hash
 

@@ -77,7 +77,7 @@ uv run python -m engines.temporal_app.run status  --run-id demo
 uv run python -m engines.temporal_app.run approve --run-id demo --decision yes --wait
 ```
 
-Real models: copy `.env.example` to `.env` and add an Anthropic key. A 100-question run on Haiku 4.5 costs about 40 cents.
+Real models: copy `.env.example` to `.env` and add an Anthropic key. A 100-question run on Haiku 4.5 costs about 40 cents; 10 items cost $0.04 on 2026-10-29. No request sends `temperature`. API version `2026-10-21`, which the `anthropic` 2.x SDK sends, rejects it with a 400, so Haiku 4.5 samples at its default.
 
 ### Knobs
 
