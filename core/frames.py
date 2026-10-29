@@ -20,7 +20,6 @@ class FrameCfg:
     long_edge: int = 768
     jpeg_quality: int = 85
     label_style: str = "letter"   # "letter" -> (A) (B) (C); "number" -> (1) (2) (3)
-    temperature: float | None = 0.0  # models that accept sampling params only; None sends none (API default)
     blind: bool = False           # no frames at all: question and options only (content-free prior)
 
     def key(self) -> str:

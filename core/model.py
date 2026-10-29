@@ -39,8 +39,10 @@ PRICES: dict[str, tuple[float, float]] = {
     "stub-b": (0.0, 0.0),
 }
 
-# Models that still accept temperature=0 (Claude 4.6/4.5 line). Later models reject it.
-SAMPLING_PARAMS_OK = {"claude-haiku-4-5-20251001", "claude-haiku-4-5"}
+# API version 2026-10-21, which the anthropic 2.x SDK sends, rejects temperature, top_p and top_k on
+# every model, so no request sends them. Haiku 4.5 rows cached before that were sampled at temperature 0;
+# its new rows get their own cache key, so those old rows are not reused.
+WAS_TEMPERATURE_0 = {"claude-haiku-4-5-20251001", "claude-haiku-4-5"}
 
 SYSTEM_PROMPT = (
     "You answer multiple-choice questions about a short video from frames sampled "
@@ -231,20 +233,18 @@ def _answer_schema(n_options: int, label_style: str) -> dict:
         "required": ["answer"], "additionalProperties": False}}
 
 
-def _request_kwargs(model_id: str, temperature: float | None = 0.0) -> dict:
+def _request_kwargs(model_id: str) -> dict:
     """Per-model request settings so every model answers from perception alone, no extended thinking.
 
-    - Haiku 4.5: temperature=0 by default. The 1.x SDK removed it from the signature; it still works via
-      the body. temperature=None sends nothing, so the API default applies.
+    No model gets sampling params: API version 2026-10-21 returns a 400 for any of them (WAS_TEMPERATURE_0).
+    - Haiku 4.5: nothing extra; thinking is off unless asked for. Default sampling (temperature 1.0).
     - Sonnet 5.5: thinking can't be disabled; `between_tools` is the lowest setting (no extended
-      thinking before the answer). Sampling params are rejected, so none are sent.
+      thinking before the answer).
     - Opus 5.5: thinking can't be disabled or set to `between_tools`; effort is the only control.
-      Effort is set to medium explicitly. Sampling params are rejected, so none are sent.
+      Effort is set to medium explicitly.
     An "output_config" entry here is merged into the request's output_config by _call_anthropic.
     No server-side fallbacks: in an evaluation a silent model substitution would corrupt the result.
     """
-    if model_id in SAMPLING_PARAMS_OK:
-        return {} if temperature is None else {"extra_body": {"temperature": temperature}}
     if model_id.startswith("claude-sonnet-5-5"):
         return {"thinking": {"type": "between_tools"}}
     if model_id.startswith("claude-opus-5-5"):
@@ -252,11 +252,10 @@ def _request_kwargs(model_id: str, temperature: float | None = 0.0) -> dict:
     return {}
 
 
-def _call_anthropic(model_id: str, content: list[dict], n_options: int, label_style: str,
-                    temperature: float | None = 0.0) -> tuple[str, int, int]:
+def _call_anthropic(model_id: str, content: list[dict], n_options: int, label_style: str) -> tuple[str, int, int]:
     import anthropic
 
-    kwargs = _request_kwargs(model_id, temperature)
+    kwargs = _request_kwargs(model_id)
     output_config = {"format": _answer_schema(n_options, label_style), **kwargs.pop("output_config", {})}
     try:
         msg = _client().messages.create(
@@ -299,9 +298,9 @@ def answer_item(item: Item, model_id: str, cfg: FrameCfg = FrameCfg(), run_id: s
         content, prompt_hash = build_prompt(item, frames, cfg.label_style)
     if cfg.blind:
         prompt_hash = f"{prompt_hash}-blind"
-    if cfg.temperature != 0.0:
-        # Keep existing cache keys for the default (temperature 0); a different setting is a different call.
-        prompt_hash = f"{prompt_hash}-t{cfg.temperature}"
+    if model_id in WAS_TEMPERATURE_0:
+        # Default sampling now, so a row cached at temperature 0 is a different call and is not reused.
+        prompt_hash = f"{prompt_hash}-tdefault"
 
     hit = cache_get(model_id, item.item_id, prompt_hash, run_id)
     if hit is not None:
@@ -317,7 +316,7 @@ def answer_item(item: Item, model_id: str, cfg: FrameCfg = FrameCfg(), run_id: s
         text, tin, tout = _stub_answer(item, model_id), 0, 0
     else:
         log_http_call(model_id, item.item_id, run_id)
-        text, tin, tout = _call_anthropic(model_id, content, len(item.candidates), cfg.label_style, cfg.temperature)
+        text, tin, tout = _call_anthropic(model_id, content, len(item.candidates), cfg.label_style)
     latency = time.time() - t0
 
     result = ModelResult(

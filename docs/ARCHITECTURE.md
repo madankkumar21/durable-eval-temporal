@@ -42,6 +42,7 @@ In COMPARISON.md, the plain-loop column for scenarios 3 to 6 describes behaviour
 
 - **The activity input carries an index, not the item.** `ItemCall` carries the item's index and run settings, and the activity reloads the item. Video frames never enter history.
 - **The engine owns retries.** The Anthropic client runs with `max_retries=0`. Errors map to Retryable or Fatal, and Fatal never retries.
+- **No sampling parameters.** API version `2026-10-21` rejects `temperature` on every model. On 2026-10-29 the unit tests passed while every real Haiku 4.5 call returned that 400, mapped to Fatal. A test now checks that no request sends one, and `pyproject.toml` pins the SDK major.
 - **The core never imports an engine.** The plain loop and Temporal call the same functions, so the comparison is fair.
 - **Calls are logged when they are sent.** A killed call still counts, the way a real model bills it.
 - **The cache was off for every measurement except scenario 2c.** With `VEU_CACHE=off`, the numbers show the engine, not the cache. Scenario 2c turns it on to test the hand-built alternative.

@@ -33,8 +33,6 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--start", type=int, default=0, help="skip this many items in file order (e.g. 100 for items 101-200)")
     ap.add_argument("--blind", action="store_true", help="send no frames: question and options only")
     ap.add_argument("--labels", default="letter", choices=["letter", "number"], help="how options are labelled in the prompt")
-    ap.add_argument("--temperature", default="0",
-                    help="Haiku 4.5 only: a number, or 'default' to send none (API default). Ignored by models that reject sampling params")
     ap.add_argument("--run-id", default=None)
     ap.add_argument("--compare-with", default=None, help="model_id of a published run to compare against")
     ap.add_argument("--yes", action="store_true", help="skip the human approval prompt")
@@ -43,8 +41,7 @@ def main(argv: list[str] | None = None) -> int:
 
     shuf = f"-shuf{args.shuffle_seed}" if args.shuffle_seed is not None else ""
     run_id = args.run_id or f"{args.model}-{args.task}-n{args.n}{shuf}-{time.strftime('%Y%m%d-%H%M%S')}"
-    temperature = None if args.temperature == "default" else float(args.temperature)
-    cfg = FrameCfg(n_frames=args.frames, label_style=args.labels, temperature=temperature, blind=args.blind)
+    cfg = FrameCfg(n_frames=args.frames, label_style=args.labels, blind=args.blind)
     t_start = time.time()
 
     items = load_items(args.task, args.n, shuffle_seed=args.shuffle_seed, permutation=args.permutation,
@@ -88,7 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         if ans != "y":
             print("not published")
             return 1
-    extra = {"shuffle_seed": args.shuffle_seed, "label_style": args.labels, "temperature": args.temperature,
+    extra = {"shuffle_seed": args.shuffle_seed, "label_style": args.labels,
              "permutation": args.permutation, "value_shuffle_seed": args.value_shuffle_seed,
              "start": args.start, "blind": args.blind, "n_frames": args.frames}
     if comparison:
