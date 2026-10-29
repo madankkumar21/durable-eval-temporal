@@ -43,7 +43,7 @@ s1() {
   run start --run-id "s1-$STAMP" --n 10 >/dev/null
   inspect ready "s1-$STAMP" >/dev/null
   run approve --run-id "s1-$STAMP" --decision yes --wait | grep -E '"published"|"correct"'
-  grep "^\[s1-$STAMP\]" results/worker.log | grep "attempt" | head -3
+  grep "^\[s1-$STAMP\] item" results/worker.log | head -3   # attempt lines only, not the "returned" lines
   echo "calls: $(calls_for_run "s1-$STAMP") for 10 items"
   stop_worker
 }
@@ -202,5 +202,32 @@ s7() {
   kill_and_check "$(cat results/plain.pid)"
 }
 
+s7b() {
+  echo; echo "== S7b: item 3's call hangs for 12 s, then returns, after its retry already finished =="
+  rm -f results/.hang-* 2>/dev/null || true
+  start_worker VEU_HANG_ITEM=$HANG_ITEM VEU_HANG_S=12
+  t0=$(date +%s)
+  run start --run-id "s7b-$STAMP" --n 10 --heartbeat-s 5 >/dev/null
+  echo "results in $(inspect ready "s7b-$STAMP" --timeout 60) s"
+  # Attempt 1 is still asleep in the worker. Wait for it to come back, and see what the worker does with it.
+  stale="Completing activity as failed.*'workflow_id': 's7b-$STAMP'"
+  for _ in $(seq 1 30); do grep -q "$stale" results/worker.log && break; sleep 1; done
+  echo "attempt 1 came back after about $(( $(date +%s) - t0 )) s; worker log:"
+  grep "$stale" results/worker.log | grep -o "Completing activity as failed ({'activity_id': '[0-9]*', 'activity_type': '[a-z_]*', 'attempt': [0-9]*" || echo "  (no stale completion logged)"
+  grep -B1 -A0 "^temporalio.exceptions.CancelledError" results/worker.log | tail -1
+  echo "result lines for item 3, attempt 1: $(grep -c "^\[s7b-$STAMP\] returned item 3 .* attempt 1 " results/worker.log || true)"
+  inspect attempts "s7b-$STAMP"
+  run approve --run-id "s7b-$STAMP" --decision yes --wait | grep -E '"published"'
+  echo "published latency for item 3: $("$PY" -c "import json,sys; print(f\"{[json.loads(l) for l in open(sys.argv[1])][2]['latency_s']:.1f} s\")" "results/s7b-$STAMP.jsonl")"
+  echo "calls: $(calls_for_run "s7b-$STAMP") for 10 items"
+  stop_worker
+
+  echo "-- plain loop, same late return --"
+  rm -f results/.hang-* 2>/dev/null || true
+  t0=$(date +%s)
+  VEU_HANG_ITEM=$HANG_ITEM VEU_HANG_S=12 "$PY" -m engines.plain --model stub --n 10 --run-id "plain7b-$STAMP" --yes >/dev/null 2>&1
+  echo "plain loop: done in $(( $(date +%s) - t0 )) s, $(calls_for_run "plain7b-$STAMP") calls for 10 items"
+}
+
 # shellcheck disable=SC2068
-for s in ${@:-s1 s2 s2c s3 s4 s5 s6 s7}; do $s; done
+for s in ${@:-s1 s2 s2c s3 s4 s5 s6 s7 s7b}; do $s; done

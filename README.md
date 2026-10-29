@@ -17,6 +17,7 @@ Every scenario runs with a free stub model, so anyone can reproduce it. Full tab
 | 5 | Run long | 200 items as 4 runs via continue-as-new, about 305 events each; carried state 37.7 KB at the last hop | n/a |
 | 6 | Throughput | 8 calls in flight: **2.5 s against 29.4 s**; a crash mid-batch re-pays the batch in flight (38 calls for 30) | n/a |
 | 7 | A call that never returns | Heartbeat timeout fires, Temporal retries, run completes in 5.6 s | **Hangs** |
+| 7b | A late result must not count | A call hung 12 s and then returned, after its retry had finished. The worker cancelled the old attempt as it came back, and history kept only the retry's result. Both calls were paid: **11 calls for 10 items** | Waited out the 12 s: 10 calls, done in 14 s |
 
 **What about a result cache instead of an engine?** Scenario 2c reruns the crash with the plain loop's result cache on. It matched Temporal on crash cost (31 calls for 30 items each), but the hung call still hung. By design, nothing in it records which runs are in progress, and its approval lives in one process. [COMPARISON.md](COMPARISON.md#the-hand-built-alternative-a-plain-loop-plus-a-result-cache) lists what you would still build.
 
@@ -46,8 +47,8 @@ engines/
   plain.py       the baseline loop
   temporal_app/  workflow, activities, worker, client CLI
 scripts/
-  temporal_scenarios.sh  runs scenarios 1 to 7 and 2c, and prints the numbers
-  inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers
+  temporal_scenarios.sh  runs scenarios 1 to 7, 2c and 7b, and prints the numbers
+  inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers, retried attempts
 docs/
   ARCHITECTURE.md        the diagram, a step-by-step walkthrough, design decisions, production path
   architecture.svg/.png  the diagram
@@ -88,7 +89,7 @@ Real models: copy `.env.example` to `.env` and add an Anthropic key. A 100-quest
 | `--chunk N` | continue-as-new after N items (scenario 5) |
 | `VEU_WORKFLOW_VERSION` | `v1`, `v2` (patched) or `v2-unpatched`: the workflow code a worker runs (scenario 4) |
 | `VEU_CACHE=off` | bypass the result cache, so the engine's own resume is what you measure |
-| `VEU_STUB_DELAY_S`, `VEU_FAIL_ITEM`, `VEU_HANG_ITEM` | slow the stub, make one item fail once, or make one item hang once |
+| `VEU_STUB_DELAY_S`, `VEU_FAIL_ITEM`, `VEU_HANG_ITEM`, `VEU_HANG_S` | slow the stub, make one item fail once, make one item hang once, or end that hang after S seconds (scenario 7b) |
 | `TEMPORAL_ADDRESS`, `TEMPORAL_NAMESPACE`, `TEMPORAL_API_KEY` | point the worker and client at Temporal Cloud; TLS turns on when a key is set |
 
 ## What the local dev server does not show

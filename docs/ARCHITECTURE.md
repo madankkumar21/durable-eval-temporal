@@ -1,6 +1,6 @@
 # Architecture
 
-One model-evaluation harness, two engines on the same Python core. Each model call is one Temporal activity. Seven failure scenarios, plus a rerun of the crash with the result cache on, were measured with a free stub model on the local dev server; the numbers are in [COMPARISON.md](../COMPARISON.md).
+One model-evaluation harness, two engines on the same Python core. Each model call is one Temporal activity. Seven failure scenarios, plus a rerun of the crash with the result cache on and a call that returns late, were measured with a free stub model on the local dev server; the numbers are in [COMPARISON.md](../COMPARISON.md).
 
 ![Architecture: CLI, Temporal dev server, worker process, plain-Python core, model, results, and the plain-loop baseline, with 13 numbered flows](architecture.png)
 
@@ -35,6 +35,7 @@ Source: [architecture.svg](architecture.svg). Blue is the work loop, orange the 
 | 5b | Carried rows reach the 2 MB payload limit | none: carry a pointer instead | about 12.5 KB per 50 items | near 8,000 items | computed |
 | 6 | Fan-out, then a kill mid-batch | `asyncio.gather` inside one workflow | `--concurrency 8` | 2.5 s against 29.4 s; killed: 38 calls for 30 items | measured |
 | 7 | A model call hangs | Heartbeat timeout, then retry | one heartbeat at start; `--heartbeat-s 5` | 5.6 s; 11 calls for 10 items; plain loop hangs (3 calls after 20 s) | measured |
+| 7b | A hung call returns after its retry finished | Heartbeat timeout, then retry; the worker cancels the old attempt when it returns | `VEU_HANG_S=12`; `--heartbeat-s 5` | history keeps one result, from attempt 2; 11 calls for 10 items; plain loop waits it out (14 s) | measured |
 
 In COMPARISON.md, the plain-loop column for scenarios 3 to 6 describes behaviour; it was not timed.
 
