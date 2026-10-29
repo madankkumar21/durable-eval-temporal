@@ -22,7 +22,8 @@ async def start(a: argparse.Namespace) -> None:
     client = await _client()
     params = EvalParams(run_id=a.run_id, model_id=a.model, task=a.task, n=a.n, n_frames=a.frames,
                         shuffle_seed=a.shuffle_seed, label_style=a.labels, chunk=a.chunk,
-                        concurrency=a.concurrency, heartbeat_s=a.heartbeat_s)
+                        concurrency=a.concurrency, heartbeat_s=a.heartbeat_s,
+                        approval_timeout_s=a.approval_timeout_s)
     handle = await client.start_workflow(EvalWorkflow.run, params, id=a.run_id, task_queue=TASK_QUEUE)
     print(f"started workflow id={handle.id} run_id={handle.result_run_id}")
     if a.wait:
@@ -34,7 +35,7 @@ async def status(a: argparse.Namespace) -> None:
     handle = client.get_workflow_handle_for(EvalWorkflow.run, a.run_id)
     desc = await handle.describe()
     print(f"status: {desc.status.name}")
-    if desc.status.name == "RUNNING":
+    if desc.status.name == "RUNNING" and not a.no_query:
         try:
             print(json.dumps(await handle.query(EvalWorkflow.status), indent=2))
         except Exception as e:  # a query needs a live worker; with none polling, the run is still RUNNING
@@ -97,11 +98,15 @@ def main() -> None:
     s.add_argument("--chunk", type=int, default=200)
     s.add_argument("--concurrency", type=int, default=1, help="items in flight at once (scenario 6)")
     s.add_argument("--heartbeat-s", type=int, default=90, help="heartbeat timeout per model call (scenario 7)")
+    s.add_argument("--approval-timeout-s", type=int, default=None,
+                   help="the approval wait expires after this many seconds; default: wait forever (scenario 3b)")
     s.add_argument("--wait", action="store_true")
     s.set_defaults(fn=start)
 
     st = sub.add_parser("status")
     st.add_argument("--run-id", required=True)
+    st.add_argument("--no-query", action="store_true",
+                    help="print the server's status only; with no worker polling, the query can block")
     st.set_defaults(fn=status)
 
     ap_ = sub.add_parser("approve")

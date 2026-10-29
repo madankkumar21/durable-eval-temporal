@@ -25,6 +25,7 @@ class EvalParams:
     chunk: int = 200              # continue-as-new after this many items (scenario 5)
     concurrency: int = 1          # items in flight at once (scenario 6)
     heartbeat_s: int = 90         # a model call silent this long is timed out and retried (scenario 7)
+    approval_timeout_s: int | None = None  # the approval wait expires after this long; None waits forever (scenario 3b)
     start_index: int = 0          # carried across continue-as-new
     rows: list[dict] = field(default_factory=list)  # Scored rows so far, carried across continue-as-new
 

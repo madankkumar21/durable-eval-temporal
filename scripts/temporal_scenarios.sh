@@ -122,6 +122,25 @@ s3() {
   stop_worker
 }
 
+s3b() {
+  echo; echo "== S3b: approval deadline of 20 s; nobody approves; kill -9 the worker during the wait =="
+  start_worker
+  run start --run-id "s3b-$STAMP" --n 5 --approval-timeout-s 20 >/dev/null
+  inspect ready "s3b-$STAMP" >/dev/null
+  echo "waiting for approval; deadline in 20 s"
+  stop_worker
+  sleep 30
+  echo "-- 30 s later, no worker attached:"
+  run status --run-id "s3b-$STAMP" --no-query   # still RUNNING: the timer fired, but the workflow needs a worker to act on it
+  echo "$(date -u +%H:%M:%S) worker restarted"; start_worker
+  run result --run-id "s3b-$STAMP" | grep -E '"published"|"decision"'
+  inspect timer "s3b-$STAMP"
+  echo "-- approve after the deadline:"
+  run approve --run-id "s3b-$STAMP" --decision yes || true
+  echo "calls: $(calls_for_run "s3b-$STAMP") for 5 items; results file: $(ls "results/s3b-$STAMP.jsonl" 2>/dev/null || echo none)"
+  stop_worker
+}
+
 s4() {
   echo; echo "== S4: deploy new workflow code while runs are in flight =="
   start_worker VEU_STUB_DELAY_S=1 VEU_WORKFLOW_VERSION=v1
@@ -230,4 +249,4 @@ s7b() {
 }
 
 # shellcheck disable=SC2068
-for s in ${@:-s1 s2 s2c s3 s4 s5 s6 s7 s7b}; do $s; done
+for s in ${@:-s1 s2 s2c s3 s3b s4 s5 s6 s7 s7b}; do $s; done

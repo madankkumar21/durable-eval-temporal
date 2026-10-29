@@ -13,6 +13,7 @@ Every scenario runs with a free stub model, so anyone can reproduce it. Full tab
 | 1 | Survive rate limits | A simulated 429 retried under a `RetryPolicy`; the workflow never saw it | Hand-written backoff |
 | 2 | Survive a crash without re-paying | `kill -9` mid-run: **31 calls for 30 items** (one was in flight) | **36 calls** |
 | 3 | Wait for a person | Waits in RUNNING with no worker attached, including through a `kill -9` of the worker during the wait. The approval is an update: sent while the run was still scoring, it was refused with "still scoring: 1 of 10 items" (10 calls for 10 items) | `input()`; lost on a crash |
+| 3b | A deadline for that person | Nobody approved; the worker was killed during the wait. The 20 s timer fired on time with no worker running. A restarted worker ended the run as "expired" 4 s after it came back; nothing published, and a late approval was refused | `input()` waits forever |
 | 4 | Deploy new code while runs are in flight | Unpatched change: nondeterminism error, runs held, not lost. `workflow.patched()`: old runs finish on the old path, new runs take the new one. Caught in pytest by a replay test | n/a |
 | 5 | Run long | 200 items as 4 runs via continue-as-new, about 305 events each; carried state 37.7 KB at the last hop | n/a |
 | 6 | Throughput | 8 calls in flight: **2.5 s against 29.4 s**; a crash mid-batch re-pays the batch in flight (38 calls for 30) | n/a |
@@ -26,6 +27,7 @@ What I took from it, as advice I would give a customer:
 - Treat workflow code changes as a deploy concern from day one. Prefer Worker Versioning where your deploys allow it; otherwise `workflow.patched()` plus a replay test in CI against saved histories, as here.
 - Do not carry growing results through continue-as-new. Store them and carry a pointer, well before the 2 MB payload limit.
 - Make approvals answer back. An update with a validator refuses an approval of results that do not exist yet, and the sender sees why. Keep a signal for approvals while no worker runs: an update waits for a worker.
+- Give a human wait a deadline. The timer is kept on the server, so it fires on time even with no worker running. The workflow acts on it when a worker next polls.
 - Set heartbeat timeouts on model calls. Without one, a hung call blocks until the start-to-close timeout. This harness heartbeats once, at the start, so the timeout bounds a silent attempt; for calls longer than the timeout, heartbeat from a background thread.
 
 ## How it fits together
@@ -47,14 +49,15 @@ engines/
   plain.py       the baseline loop
   temporal_app/  workflow, activities, worker, client CLI
 scripts/
-  temporal_scenarios.sh  runs scenarios 1 to 7, 2c and 7b, and prints the numbers
+  temporal_scenarios.sh  runs scenarios 1 to 7, 2c, 3b and 7b, and prints the numbers
   inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers, retried attempts
 docs/
   ARCHITECTURE.md        the diagram, a step-by-step walkthrough, design decisions, production path
   architecture.svg/.png  the diagram
 tests/
-  test_replay.py         scenario 4: replays a recorded v1 history against v1, v2 and unpatched v2 code
-  histories/v1_run.json  that history
+  test_replay.py         scenario 4: replays a recorded v1 history against v1, v2 and unpatched v2 code;
+                         scenario 3b: replays a run whose approval deadline expired
+  histories/             those two histories
 ```
 
 ## Run it
@@ -86,6 +89,7 @@ Real models: copy `.env.example` to `.env` and add an Anthropic key. A 100-quest
 |---|---|
 | `--concurrency N` | model calls in flight at once (scenario 6) |
 | `--heartbeat-s S` | a call silent this long is timed out and retried (scenario 7) |
+| `--approval-timeout-s S` | the approval wait expires after S seconds: the run returns "expired" and publishes nothing (scenario 3b) |
 | `--chunk N` | continue-as-new after N items (scenario 5) |
 | `VEU_WORKFLOW_VERSION` | `v1`, `v2` (patched) or `v2-unpatched`: the workflow code a worker runs (scenario 4) |
 | `VEU_CACHE=off` | bypass the result cache, so the engine's own resume is what you measure |
