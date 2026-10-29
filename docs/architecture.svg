@@ -63,7 +63,7 @@
   <text class="ns" x="304" y="300">History limit: 51,200 events or 50 MB</text>
   <text class="ns" x="304" y="315">Payload limit: 2 MB per payload</text>
   <text class="ns" x="304" y="335">Signals reach the server with no worker;</text>
-  <text class="ns" x="304" y="350">queries need a worker polling.</text>
+  <text class="ns" x="304" y="350">updates and queries need a worker.</text>
 
   <!-- worker -->
   <rect class="node" x="690" y="70" width="470" height="52" rx="8"/>
@@ -73,7 +73,7 @@
   <text class="nt" x="704" y="162">EvalWorkflow · deterministic</text>
   <text class="ns" x="704" y="180">batches: gather(answer_item × concurrency)</text>
   <text class="ns" x="704" y="195">continue-as-new every chunk (50 in S5), carrying all rows</text>
-  <text class="ns" x="704" y="210">wait_condition(approve) · query status · patch progress-v2</text>
+  <text class="ns" x="704" y="210">wait_condition(decision) · query status · patch progress-v2</text>
   <rect class="node hi" x="690" y="245" width="310" height="110" rx="8"/>
   <text class="nt" x="704" y="267">answer_item_activity</text>
   <text class="ns" x="704" y="285">RetryPolicy 2 s ×2 ≤60 s · 8 attempts</text>
@@ -100,7 +100,7 @@
   <rect class="node" x="655" y="455" width="90" height="56" rx="6"/><text class="nt" x="669" y="477">stats</text><text class="ns" x="669" y="495">Wilson CI</text>
   <rect class="node" x="760" y="455" width="85" height="56" rx="6"/><text class="nt" x="774" y="477">publish</text><text class="ns" x="774" y="495">jsonl + md</text>
   <path class="e ep" d="M400 483 H411" marker-end="url(#ap)"/><path class="e ep" d="M535 483 H546" marker-end="url(#ap)"/><path class="e ep" d="M640 483 H651" marker-end="url(#ap)"/><path class="e ep" d="M745 483 H756" marker-end="url(#ap)"/>
-  <text class="ns" x="455" y="560">cache key: model_id, item_id, prompt_hash</text><text class="ns" x="455" y="575">cache reads off for every test</text>
+  <text class="ns" x="455" y="560">cache key: model_id, item_id, prompt_hash</text><text class="ns" x="455" y="575">cache reads off except test 2c</text>
 
   <!-- model -->
   <rect class="node" x="915" y="455" width="120" height="115" rx="8"/>
@@ -118,7 +118,7 @@
   <!-- results -->
   <rect class="node" x="310" y="680" width="300" height="72" rx="8"/>
   <text class="nt" x="324" y="702">cache.sqlite</text>
-  <text class="ns" x="324" y="720">calls: result cache (reads off)</text>
+  <text class="ns" x="324" y="720">calls: result cache (off; 2c on)</text>
   <text class="ns" x="324" y="735">http_calls: one row per call sent</text>
   <rect class="node" x="640" y="680" width="300" height="72" rx="8"/>
   <text class="nt" x="654" y="702">&lt;run_id&gt;.jsonl · .summary.*</text>
