@@ -122,8 +122,14 @@ class EvalWorkflow:
             summarize_activity, rows, start_to_close_timeout=timedelta(seconds=60)
         )
 
-        # Scenario 3: block until a person signals. The run survives worker restarts while waiting.
-        await workflow.wait_condition(lambda: self.decision is not None)
+        # Scenario 3: block until a person decides. The run survives worker restarts while waiting.
+        # Scenario 3b: approval_timeout_s adds a durable timer. It fires on the server, so the wait
+        # ends on time even with no worker running. None starts no timer, so old histories still replay.
+        timeout = timedelta(seconds=params.approval_timeout_s) if params.approval_timeout_s else None
+        try:
+            await workflow.wait_condition(lambda: self.decision is not None, timeout=timeout)
+        except asyncio.TimeoutError:
+            self.decision = "expired"
         if self.decision != "yes":
             return {"published": False, "decision": self.decision, "summary": self.summary.__dict__}
 

@@ -1,4 +1,4 @@
-"""Read-only checks for the scenario script: time to results, the continue-as-new chain, markers, attempts."""
+"""Read-only checks for the scenario script: time to results, the continue-as-new chain, markers, attempts, timers."""
 
 from __future__ import annotations
 
@@ -64,9 +64,33 @@ async def attempts(wid: str) -> None:
             print(f"{scheduled[sid]} (event {sid}): history records attempt {attempt}; results recorded: {completed.get(sid, 0)}")
 
 
+async def timer(wid: str) -> None:
+    """The approval timer, and each workflow-task event after it fired, in UTC (scenario 3b)."""
+    client = await connect()
+    hist = await client.get_workflow_handle(wid).fetch_history()
+    t = lambda e: e.event_time.ToDatetime().strftime("%H:%M:%S")
+    started = next((e for e in hist.events if e.HasField("timer_started_event_attributes")), None)
+    fired = next((e for e in hist.events if e.HasField("timer_fired_event_attributes")), None)
+    if started is None or fired is None:
+        print("no timer fired")
+        return
+    secs = (fired.event_time.ToDatetime() - started.event_time.ToDatetime()).total_seconds()
+    print(f"{t(started)} timer started; {t(fired)} timer fired ({secs:.1f} s)")
+    for e in hist.events:
+        if e.event_id <= fired.event_id:
+            continue
+        if e.HasField("workflow_task_scheduled_event_attributes"):
+            kind = "sticky" if e.workflow_task_scheduled_event_attributes.task_queue.kind == 2 else "normal"
+            print(f"{t(e)} workflow task scheduled on the {kind} queue")
+        elif e.HasField("workflow_task_timed_out_event_attributes"):
+            print(f"{t(e)} workflow task timed out before any worker started it")
+        elif e.HasField("workflow_task_started_event_attributes"):
+            print(f"{t(e)} a worker started the workflow task")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("cmd", choices=["ready", "chain", "markers", "attempts"])
+    ap.add_argument("cmd", choices=["ready", "chain", "markers", "attempts", "timer"])
     ap.add_argument("wid")
     ap.add_argument("--timeout", type=float, default=120)
     a = ap.parse_args()
@@ -76,6 +100,8 @@ def main() -> None:
         asyncio.run(chain(a.wid))
     elif a.cmd == "attempts":
         asyncio.run(attempts(a.wid))
+    elif a.cmd == "timer":
+        asyncio.run(timer(a.wid))
     else:
         asyncio.run(markers(a.wid))
 
