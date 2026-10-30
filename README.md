@@ -13,7 +13,7 @@ Every scenario runs with a free stub model, so anyone can reproduce it. Full tab
 | 1 | Survive rate limits | A simulated 429 retried under a `RetryPolicy`; the workflow never saw it | Hand-written backoff |
 | 2 | Survive a crash without re-paying | `kill -9` mid-run: **31 calls for 30 items** (one was in flight) | **36 calls** |
 | 3 | Wait for a person | Waits in RUNNING with no worker attached, including through a `kill -9` of the worker during the wait. The approval is an update: sent while the run was still scoring, it was refused with "still scoring: 1 of 10 items" (10 calls for 10 items) | `input()`; lost on a crash |
-| 3b | A deadline for that person | Nobody approved; the worker was killed during the wait. The 20 s timer fired on time with no worker running. A restarted worker ended the run as "expired" 4 s after it came back; nothing published, and a late approval was refused | `input()` waits forever |
+| 3b | A deadline for that person | Nobody approved; the worker was killed during the wait. The 20 s timer fired on time with no worker running. A worker started after that ended the run as "expired" 4 s after the restart command; nothing published, and a late approval was refused | `input()` waits forever |
 | 4 | Deploy new code while runs are in flight | Unpatched change: nondeterminism error, runs held, not lost. `workflow.patched()`: old runs finish on the old path, new runs take the new one. Caught in pytest by a replay test | n/a |
 | 5 | Run long | 200 items as 4 runs via continue-as-new, about 305 events each; carried state 37.7 KB at the last hop | n/a |
 | 6 | Throughput | 8 calls in flight: **2.5 s against 29.4 s**; a crash mid-batch re-pays the batch in flight (38 calls for 30) | n/a |
@@ -50,7 +50,7 @@ engines/
   temporal_app/  workflow, activities, worker, client CLI
 scripts/
   temporal_scenarios.sh  runs scenarios 1 to 7, 2c, 3b and 7b, and prints the numbers
-  inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers, retried attempts
+  inspect_run.py         read-only checks: time to results, the continue-as-new chain, patch markers, retried attempts, timers
 docs/
   ARCHITECTURE.md        the diagram, a step-by-step walkthrough, design decisions, production path
   architecture.svg/.png  the diagram

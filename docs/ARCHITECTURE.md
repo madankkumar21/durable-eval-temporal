@@ -30,7 +30,7 @@ Source: [architecture.svg](architecture.svg). Blue is the work loop, orange the 
 | 2 | Worker `kill -9` mid-run, 30 items | History replay; the in-flight call retries after the heartbeat timeout | `--heartbeat-s 5` | 31 calls for 30 items; plain loop: 36 | measured |
 | 2c | The same kill on a plain loop with the result cache on | The core cache, keyed per item | `VEU_CACHE=on` | 31 calls for 30 items, as on Temporal; a hung call still hangs | measured |
 | 3 | A person must approve; worker killed while waiting | Update with a validator, then `wait_condition`; query for status; signal kept as a fallback | `decide` update, `approve` signal, `status` query | Early approval refused ("still scoring: 1 of 10 items"); RUNNING with no worker; 10 calls for 10 items; published | measured |
-| 3b | Nobody approves in time; worker killed while waiting | `wait_condition` with a timeout: a durable timer on the server | `--approval-timeout-s 20` | timer fired at 20.0 s with no worker; restarted worker picked the run up 4 s after it came back; "expired", nothing published; 5 calls for 5 items | measured |
+| 3b | Nobody approves in time; worker killed while waiting | `wait_condition` with a timeout: a durable timer on the server | `--approval-timeout-s 20` | timer fired at 20.0 s with no worker; the run was picked up 4 s after the restart command; "expired", nothing published; 5 calls for 5 items | measured |
 | 4 | New workflow code deployed mid-run | `workflow.patched("progress-v2")`; replay test in pytest | `VEU_WORKFLOW_VERSION` v1 / v2-unpatched / v2 | unpatched: both runs held, none lost; patched: old runs 0 markers, new run 1 marker | measured |
 | 5 | Long run, 200 items | Continue-as-new every 50 items | `--chunk 50` | 4 runs, 305 to 322 events each; 37.7 KB carried at the last hop | measured |
 | 5b | Carried rows reach the 2 MB payload limit | none: carry a pointer instead | about 12.5 KB per 50 items | near 8,000 items | computed |
@@ -69,9 +69,10 @@ In COMPARISON.md, the plain-loop column for scenarios 3 to 6 describes behaviour
 
 - It ran on the local dev server, one process on SQLite. Nothing ran on Temporal Cloud.
 - It survives a worker dying, not the server dying. The dev server keeps history only because of `--db-filename`.
-- The model was a stub. Stub calls cost nothing; only the call counts matter.
+- The scenarios used a stub model. Stub calls cost nothing; only the call counts matter. One live 10-item Haiku 4.5 run checked the paid path on 2026-10-29; it is not an engine scenario.
+- Scenario 7b used the stub, which hangs in `time.sleep`. The worker cancelled the late attempt when that sleep returned. A real model call blocked in network I/O was not tested.
 - The call in flight at a crash is paid again: one call alone, or the whole batch with fan-out.
 - Continue-as-new "suggested" was never triggered; the 50-item chunk always fired first.
 - The cache comparison (2c) ran at concurrency 1, with the restart done by hand. It does not test a supervisor or a queue.
 
-Sources: the code in this repo; runs of 2026-10-22 (scenario 3 on 2026-10-28 and 2026-10-29; scenario 2c on 2026-10-29) with the stub model and the cache off (on in scenario 2c), from `scripts/temporal_scenarios.sh`; limits and versioning guidance from [docs.temporal.io](https://docs.temporal.io).
+Sources: the code in this repo; runs of 2026-10-22 (scenario 3 on 2026-10-28 and 2026-10-29; scenarios 2c, 3b and 7b on 2026-10-29, and a full re-run of all ten scenario functions that day) with the stub model and the cache off (on in scenario 2c), from `scripts/temporal_scenarios.sh`; one live Haiku 4.5 check of the paid path on 2026-10-29; limits and versioning guidance from [docs.temporal.io](https://docs.temporal.io).
