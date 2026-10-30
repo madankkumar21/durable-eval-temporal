@@ -43,14 +43,36 @@ def test_request_kwargs_per_model():
     assert MAX_TOKENS["claude-opus-5-5"] >= 1024
 
 
-def test_no_request_sends_sampling_params():
+def test_no_request_sends_sampling_params(monkeypatch):
     # API version 2026-10-21 returns a 400 for temperature, top_p or top_k, on every model,
-    # even when they arrive through extra_body.
-    from core.model import PRICES, _request_kwargs
-    for model_id in PRICES:
-        kwargs = _request_kwargs(model_id)
-        assert "extra_body" not in kwargs
-        assert not {"temperature", "top_p", "top_k"} & kwargs.keys()
+    # even when they arrive through extra_body. Check the request _call_anthropic actually sends.
+    import core.model as m
+
+    sent = {}
+
+    class Usage:
+        input_tokens, output_tokens = 10, 5
+
+    class Msg:
+        stop_reason, usage = "end_turn", Usage()
+        content = [type("B", (), {"type": "text", "text": '{"answer": "B"}'})()]
+
+    class Client:
+        class messages:
+            @staticmethod
+            def create(**kw):
+                sent.clear()
+                sent.update(kw)
+                return Msg()
+
+    monkeypatch.setattr(m, "_client", lambda: Client())
+    sampling = {"temperature", "top_p", "top_k"}
+    for model_id in m.PRICES:
+        if model_id.startswith("stub"):
+            continue
+        m._call_anthropic(model_id, [], 3, "letter")
+        assert not sampling & sent.keys(), model_id
+        assert not sampling & sent.get("extra_body", {}).keys(), model_id
 
 
 def test_opus_output_config_merges_effort_with_format(monkeypatch):
@@ -114,6 +136,8 @@ def test_haiku45_rows_cached_at_temperature_0_are_not_reused(monkeypatch):
         monkeypatch.setattr(m, name, lambda *a: None)
     r = m.answer_item(item, "claude-haiku-4-5-20251001", FrameCfg(blind=True), "test")
     assert r.prompt_hash.endswith("-tdefault")
+    old_key = m.build_prompt(item, [], "letter")[1] + "-blind"  # the temperature-0 key before 2026-10-21
+    assert r.prompt_hash != old_key
 
 
 def test_blind_sends_no_frames_and_has_its_own_cache_key(monkeypatch):

@@ -48,6 +48,7 @@ def test_unpatched_v2_breaks_v1_history(monkeypatch):
 
 
 def test_approval_deadline_replays(monkeypatch):
-    # Scenario 3b: the timer and the "expired" result replay on the current code. v1 above has no
-    # deadline, so it records no timer, and still replays: the deadline only starts a timer when set.
+    # Scenario 3b: the deadline's timer replays on the current code. The Replayer compares commands,
+    # not the returned value, so this guards the timer, not the "expired" result. v1 above has no
+    # deadline and records no timer, and still replays: the deadline only starts a timer when set.
     _replay("v1", monkeypatch, "approval_expired.json")

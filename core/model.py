@@ -300,7 +300,7 @@ def answer_item(item: Item, model_id: str, cfg: FrameCfg = FrameCfg(), run_id: s
     if cfg.blind:
         prompt_hash = f"{prompt_hash}-blind"
     if model_id in WAS_TEMPERATURE_0:
-        # Default sampling now, so a row cached at temperature 0 is a different call and is not reused.
+        # Default sampling now. Rows cached under the old keys (temperature 0, or "-tNone") are not reused.
         prompt_hash = f"{prompt_hash}-tdefault"
 
     hit = cache_get(model_id, item.item_id, prompt_hash, run_id)

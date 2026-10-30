@@ -14,6 +14,13 @@ from .shared import EvalParams
 from .workflows import EvalWorkflow
 
 
+def _positive_int(s: str) -> int:
+    v = int(s)
+    if v <= 0:
+        raise argparse.ArgumentTypeError("must be a positive number of seconds")
+    return v
+
+
 async def _client() -> Client:
     return await connect()
 
@@ -98,7 +105,7 @@ def main() -> None:
     s.add_argument("--chunk", type=int, default=200)
     s.add_argument("--concurrency", type=int, default=1, help="items in flight at once (scenario 6)")
     s.add_argument("--heartbeat-s", type=int, default=90, help="heartbeat timeout per model call (scenario 7)")
-    s.add_argument("--approval-timeout-s", type=int, default=None,
+    s.add_argument("--approval-timeout-s", type=_positive_int, default=None,
                    help="the approval wait expires after this many seconds; default: wait forever (scenario 3b)")
     s.add_argument("--wait", action="store_true")
     s.set_defaults(fn=start)

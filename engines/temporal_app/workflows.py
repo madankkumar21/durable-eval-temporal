@@ -129,7 +129,10 @@ class EvalWorkflow:
         try:
             await workflow.wait_condition(lambda: self.decision is not None, timeout=timeout)
         except asyncio.TimeoutError:
-            self.decision = "expired"
+            # Signals and updates run before timers in a workflow task, so a decision that arrived
+            # with the timer is already set. Keep it; expire only a run nobody decided.
+            if self.decision is None:
+                self.decision = "expired"
         if self.decision != "yes":
             return {"published": False, "decision": self.decision, "summary": self.summary.__dict__}
 

@@ -6,6 +6,8 @@ import argparse
 import asyncio
 import time
 
+from temporalio.api.enums.v1 import TaskQueueKind
+
 from engines.temporal_app import connect
 from engines.temporal_app.workflows import EvalWorkflow
 
@@ -46,22 +48,22 @@ async def markers(wid: str) -> None:
 
 
 async def attempts(wid: str) -> None:
-    """Each model call that needed a retry: which attempt history recorded, and how many results (scenario 7b)."""
+    """Each call that needed a retry, and the attempt history recorded as the one that ran (scenario 7b).
+    History keeps one started and one closing event per call, so a dropped attempt leaves no event."""
     client = await connect()
     hist = await client.get_workflow_handle(wid).fetch_history()
-    scheduled, started, completed = {}, {}, {}
+    scheduled, started = {}, {}
     for e in hist.events:
         if e.HasField("activity_task_scheduled_event_attributes"):
             scheduled[e.event_id] = e.activity_task_scheduled_event_attributes.activity_type.name
         elif e.HasField("activity_task_started_event_attributes"):
             a = e.activity_task_started_event_attributes
             started[a.scheduled_event_id] = a.attempt
-        elif e.HasField("activity_task_completed_event_attributes"):
-            sid = e.activity_task_completed_event_attributes.scheduled_event_id
-            completed[sid] = completed.get(sid, 0) + 1
-    for sid, attempt in started.items():
-        if attempt > 1:
-            print(f"{scheduled[sid]} (event {sid}): history records attempt {attempt}; results recorded: {completed.get(sid, 0)}")
+    retried = [(sid, n) for sid, n in started.items() if n > 1]
+    for sid, attempt in retried:
+        print(f"{scheduled[sid]} (event {sid}): history records attempt {attempt}")
+    if not retried:
+        print("no call needed a retry")
 
 
 async def timer(wid: str) -> None:
@@ -80,7 +82,8 @@ async def timer(wid: str) -> None:
         if e.event_id <= fired.event_id:
             continue
         if e.HasField("workflow_task_scheduled_event_attributes"):
-            kind = "sticky" if e.workflow_task_scheduled_event_attributes.task_queue.kind == 2 else "normal"
+            sticky = e.workflow_task_scheduled_event_attributes.task_queue.kind == TaskQueueKind.TASK_QUEUE_KIND_STICKY
+            kind = "sticky" if sticky else "normal"
             print(f"{t(e)} workflow task scheduled on the {kind} queue")
         elif e.HasField("workflow_task_timed_out_event_attributes"):
             print(f"{t(e)} workflow task timed out before any worker started it")

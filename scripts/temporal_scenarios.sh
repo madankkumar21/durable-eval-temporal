@@ -132,7 +132,7 @@ s3b() {
   sleep 30
   echo "-- 30 s later, no worker attached:"
   run status --run-id "s3b-$STAMP" --no-query   # still RUNNING: the timer fired, but the workflow needs a worker to act on it
-  echo "$(date -u +%H:%M:%S) worker restarted"; start_worker
+  echo "$(date -u +%H:%M:%S) restart command for the worker"; start_worker
   run result --run-id "s3b-$STAMP" | grep -E '"published"|"decision"'
   inspect timer "s3b-$STAMP"
   echo "-- approve after the deadline:"
@@ -233,7 +233,7 @@ s7b() {
   for _ in $(seq 1 30); do grep -q "$stale" results/worker.log && break; sleep 1; done
   echo "attempt 1 came back after about $(( $(date +%s) - t0 )) s; worker log:"
   grep "$stale" results/worker.log | grep -o "Completing activity as failed ({'activity_id': '[0-9]*', 'activity_type': '[a-z_]*', 'attempt': [0-9]*" || echo "  (no stale completion logged)"
-  grep -B1 -A0 "^temporalio.exceptions.CancelledError" results/worker.log | tail -1
+  grep -A40 "$stale" results/worker.log | grep -m1 "^temporalio.exceptions.CancelledError" || echo "  (no CancelledError logged)"
   echo "result lines for item 3, attempt 1: $(grep -c "^\[s7b-$STAMP\] returned item 3 .* attempt 1 " results/worker.log || true)"
   inspect attempts "s7b-$STAMP"
   run approve --run-id "s7b-$STAMP" --decision yes --wait | grep -E '"published"'
